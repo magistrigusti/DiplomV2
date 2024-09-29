@@ -235,6 +235,368 @@ describe('Sbt', () => {
     });
 
     it ('random guy request ownership', async () => {
+        let someGuyWallet = await blockchain.treasury('some guy');
+        let randomPersonWallet = await blockchain.treasury('random person');
+
+        let dataCell = beginCell()
+            .storeUint(888, 16)
+            .endCell();
+
+        let res = await someGuyWallet.send({
+            to: token.address,
+            value: toNano(1),
+            bounce: false,
+            body: Queries.requestOwnerInfo({
+                to: randomPersonWallet.address,
+                data: dataCell,
+                withContent: true,
+            }),
+        });
+
+        expect(res.transactions).toHaveTransaction({
+            from: someGuyWallet.address,
+            to: token.address,
+            success: true,
+        }); 
+
+        expect(res.transactions).toHaveTransaction({
+            from: token.address,
+            to: randomPersonWallet.address,
+            success: true,
+            op: OperationCodes.OwnerInfo,
+        });
+
+        let tx = flattenTransaction(findTransactionRequired(res.transactions, {op: OperationCodes.OwnerInfo}));
+        let response = tx.body!.beginParse();
+        let op = response.loadUint(32);
+        let queryId = response.loadUint(64);
+        let index = response.loadUint(256);
+        let sender = response.loadAddress();
+        let owner = response.loadAddress();
+        let data = response.loadRef().beginParse();
+        let revokedAt = response.loadUint(64);
+        let withCont = response.loadBit();
+        let cont = response.loadRef();
+
+        expect(op).toEqual(OperationCodes.OwnerInfo);
+        expect(queryId).toEqual(0);
+        expect(index).toEqual(777);
+        expect(sender.toString()).toEqual(someGuyWallet.address.toString());
+        expect(owner.toString()).toEqual(config.ownerAddress!.toString());
+        expect(data.loadUint(16)).toEqual(888);
+        expect(revokedAt).toEqual(0);
+        expect(withCont).toEqual(true);
+        expect(decodeOnChainContent(cont, custom_nft_fields)).toEqual(configMetadata);
+    });
+
+    it ('should request ownership with content', async () => {
+        let someGuyWallet = await blockchain.treasury('some guy');
+        let randomPersonWallet = await blockchain.treasury('random person');
+
+        let dataCell = beginCell().storeUint(888, 16).endCell();
+
+        let res = await someGuyWallet.send({
+            to: token.address,
+            value: toNano(1),
+            bounce: false,
+            body: Queries.requestOwnerInfo({
+                to: randomPersonWallet.address,
+                data: dataCell,
+                withContent: true
+            })
+        });
+
+        expect(res.transactions).toHaveTransaction({
+            from: someGuyWallet.address,
+            to: token.address,
+            success: true 
+        });
+
+        expect(res.transactions).toHaveTransaction({
+            from: token.address,
+            to: randomPersonWallet.address,
+            success: true,
+            op: OperationCodes.OwnerInfo 
+        });
+
+        let tx = flattenTransaction(findTransactionRequired(res.transactions, {op: OperationCodes.OwnerInfo}));
+        let response = tx.body!.beginParse();
+        let op = response.loadUint(32);
+        let queryId = response.loadUint(64);
+        let index = response.loadUint(256);
+        let sender = response.loadAddress();
+        let owner = response.loadMaybeAddress();
+        let data = response.loadRef().beginParse();
+        let revokedAt = response.loadUint(64);
+        let withCont = response.loadBit();
+        let cont = response.loadRef();
+
+        expect(op).toEqual(OperationCodes.OwnerInfo)
+        expect(queryId).toEqual(0);
+        expect(index).toEqual(777);
+        expect(sender.toString()).toEqual(someGuyWallet.address.toString());
+        expect(owner?.toString()).toEqual(config.ownerAddress!.toString());
+        expect(data.loadUint(16)).toEqual(888);
+        expect(revokedAt).toEqual(0);
+        expect(withCont).toEqual(true);
+        expect(decodeOnChainContent(cont, custom_nft_fields)).toEqual(configMetadata);
+    });
+
+    it ('should prove ownership with content', async () => {
+        let prooveTo= await blockchain.treasury('proove to');
+        let dataCell = beginCell().storeUint(888, 16).endCell();
+
+        let res = await deployer.send({
+            to: token.address,
+            value: toNano(1),
+            bounce: false,
+            body: Queries.proveOwnership({
+                to: prooveTo.address,
+                data: dataCell,
+                withContent: true 
+            })
+        });
+
+        expect(res.transactions).toHaveTransaction({
+            from: deployer.address,
+            to: token.address,
+            success: true 
+        });
+
+        expect(res.transactions).toHaveTransaction({
+            from: token.address,
+            to: prooveTo.address,
+            success: true,
+            op: OperationCodes.OwnershipProof 
+        });
+
+        let tx = flattenTransaction(findTransactionRequired(res.transactions, {op: OperationCodes.OwnershipProof}));
+        let response = tx.body!.beginParse();
+        let op = response.loadUint(32);
+        let queryId = response.loadUint(64);
+        let index = response.loadUint(256);
+        let owner = response.loadAddress();
+        let data = response.loadRef();
+        let revokedAt = response.loadUint(64);
+        let withCont = response.loadBit();
+        let cont = response.loadRef();
+
+        expect(op).toEqual(OperationCodes.OwnershipProof);
+        expect(queryId).toEqual(0);
+        expect(index).toEqual(777);
+        expect(owner.toString()).toEqual(config.ownerAddress!.toString());
+        expect(data.beginParse().loadUint(16)).toEqual(888);
+        expect(revokedAt).toEqual(0);
+        expect(withCont).toEqual(true);
+        expect(decodeOnChainContent(cont, custom_nft_fields)).toEqual(configMetadata);
+    });
+
+    it ('should request ownership without content', async () => {
+        let someGuyWallet = await blockchain.treasury('some guy');
+        let randomPersonWallet = await blockchain.treasury('random person');
+        let dataCell = beginCell().storeUint(888, 16).endCell();
+
+        let res = await someGuyWallet.send({
+            to: token.address,
+            value: toNano(1),
+            bounce: false,
+            body: Queries.requestOwnerInfo({
+                to: randomPersonWallet.address,
+                data: dataCell,
+                withContent: false
+            })
+        });
+
+        expect(res.transactions).toHaveTransaction({
+            from: someGuyWallet.address,
+            to: token.address,
+            success: true 
+        });
+
+        expect(res.transactions).toHaveTransaction({
+            from: token.address,
+            to: randomPersonWallet.address,
+            success: true,
+            op: OperationCodes.OwnerInfo 
+        });
+
+        let tx = flattenTransaction(findTransactionRequired(res.transactions, {op: OperationCodes.OwnerInfo}));
+        let response = tx.body!.beginParse();
+        let op = response.loadUint(32);
+        let queryId = response.loadUint(64);
+        let index = response.loadUint(256);
+        let sender = response.loadAddress();
+        let owner = response.loadAddress();
+        let data = response.loadRef().beginParse();
+        let revokedAt = response.loadUint(64);
+        let withCont = response.loadBit();
+
+        expect(op).toEqual(OperationCodes.OwnerInfo);
+        expect(queryId).toEqual(0);
+        expect(index).toEqual(777);
+        expect(sender.toString()).toEqual(someGuyWallet.address.toString());
+        expect(owner.toString()).toEqual(config.ownerAddress!.toString());
+        expect(data.loadUint(16)).toEqual(888);
+        expect(revokedAt).toEqual(0);
+        expect(withCont).toEqual(false);
+    });
+    
+    it ('should verify ownership bounce to owner', async () => {
+        let nonExistAddr = randomAddress();
+        let dataCell = beginCell().storeUint(888, 16).endCell();
+
+        let res = await deployer.send({
+            to: token.address,
+            value: toNano(1),
+            bounce: true,
+            body: Queries.proveOwnership({
+                queryId: 777,
+                to: nonExistAddr,
+                data: dataCell,
+                withContent: false
+            })
+        });
+
+        expect(res.transactions).toHaveTransaction({
+            from: deployer.address,
+            to: token.address,
+            success: true,
+        });
+
+        expect(res.transactions).toHaveTransaction({
+            from: token.address,
+            to: nonExistAddr,
+            success: false,
+            op: OperationCodes.OwnershipProof 
+        });
+
+        expect(res.transactions).toHaveTransaction({
+            from: nonExistAddr,
+            to: token.address,
+            success: true,
+            inMessageBounced: true,
+        });
+
+        expect(res.transactions).toHaveTransaction({
+            from: token.address,
+            to: OWNER_ADDRESS,
+            success: true,
+            op: OperationCodes.OwnershipProofBounced 
+        });
+
+        let tx = flattenTransaction(findTransactionRequired(res.transactions, {op: OperationCodes.OwnershipProofBounced}));
+        let response = tx.body!.beginParse();
+        let op = response.loadUint(32);
+        let queryId = response.loadUint(64);
+
+        expect(op).toEqual(OperationCodes.OwnershipProofBounced);
+        expect(queryId).toEqual(777);
+    });
+
+    if ('should not verify ownership non bounced', async () => {
+        let proofReq = await blockchain.treasury('proove req by');
+        let dataCell = beginCell().storeUint(888, 16).endCell();
+
+        let res = await proofReq.send({
+            to: token.address,
+            value: toNano(1),
+            bounce: false,
+            body: Queries.ownershipProof({
+                id: 777,
+                owner: config.ownerAddress!,
+                data: dataCell 
+            })
+        });
+
+        expect(res.transactions).toHaveTransaction({
+            from: proofReq.address,
+            to: token.address,
+            success: false,
+            exitCode: 0xffff,
+        });
+    });
+
+    it ('should revoke', async () => {
+        let tm1 = await token.getRevokedTime();
+
+        expect(tm1).toEqual(null);
+
+        let res = await token.sendRevoke(authority_wallet.getSender());
+
+        expect(res.transactions).toHaveTransaction({
+            from: authority_wallet.address,
+            to: token.address,
+            success: true,
+            op: OperationCodes.Revoke,
+        });
+
+        let tm = await token.getRevokedTime();
+
+        expect(tm).toBeGreaterThanOrEqual(1);
+    });
+
+    it ('should not revoke', async () => {
+        let res = await token.sendRevoke(deployer.getSender());
+
+        expect(res.transactions).toHaveTransaction({
+            from: deployer.address,
+            to: token.address,
+            success: false,
+            op: OperationCodes.Revoke,
+            exitCode: 401,
+        });
+    });
+
+    it ('should not take excess', async () => {
+        let res = await token.sendTakeExcess(authority_wallet.getSender());
+
+        expect(res.transactions).toHaveTransaction({
+            from: authority_wallet.address,
+            to: token.address,
+            success: false,
+            op: OperationCodes.TakeExcess,
+            exitCode: 401 
+        });
+    });
+
+    it ('should take excess', async () => {
+        let res = await token.sendTakeExcess(deployer.getSender());
+
+        expect(res.transactions).toHaveTransaction({
+            from: deployer.address,
+            to: token.address,
+            success: true,
+            op: OperationCodes.TakeExcess 
+        });
+
+        expect(res.transactions).toHaveTransaction({
+            from: token.address,
+            to: deployer.address,
+            success: true,
+            op: OperationCodes.excesses 
+        });
+    });
+
+    it ('should not allow to edit', async () => {
+        let configMetadataEdit = {"description": "New value"};
+        let res1 = await token.sendEditContent(authority_wallet.getSender(), 
+            {content: encodeOnChainContent(configMetadataEdit)});
         
+        expect(res1.transactions).toHaveTransaction({
+            from: authority_wallet.address,
+            to: token.address,
+            success: false,
+            exitCode: 0xffff 
+        });
+
+        let res2 = await token.sendEditContent(deployer.getSender(), 
+            {content: encodeOnChainContent(configMetadataEdit)});
+
+        expect(res2.transactions).toHaveTransaction({
+            from: deployer.address,
+            to: token.address,
+            success: false,
+            exitCode: 0xffff 
+        });
     });
 });
