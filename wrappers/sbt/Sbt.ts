@@ -12,6 +12,13 @@ export class Sbt implements Contract {
         return new Sbt(address);
     }
 
+    static createFromConfig(config: SbtItemData, code: Cell, workchain = 0) {
+        const data = buildSbtItemDataCell(config);
+        const init = {code, data};
+
+        return new Sbt(contractAddress(workchain, init), init);
+    }
+
     static createSingleFromConfig(config: SbtSingleData, code: Cell, workchain = 0) {
         const data = buildSingleSbtDataCell(config);
         const init = { code, data };
@@ -75,12 +82,12 @@ export class Sbt implements Contract {
     }
 
     async sendGetStaticData(provider: ContractProvider, via: Sender) {
-        let msgBody = Queries.getStaticData({});
+        let msgBody = Queries.getStaticData({})
 
         return await provider.internal(via, {
             value: toNano('0.05'),
             body: msgBody
-        });
+        })
     }
 
     async sendEditContent(provider: ContractProvider, via: Sender, params: {
