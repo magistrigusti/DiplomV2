@@ -4,7 +4,7 @@ import { sha256_sync } from '@ton/crypto'
 const ON_CHAIN_CONTENT_PREFIX = 0x00;
 const OFF_CHAIN_CONTENT_PREFIX = 0x01;
 const CONTENT_DATA_FORMAT_SNAKE = 0x00;
-const CONTENT_DATA_FORMAT_CHUNKED = 0x01;
+
 
 export function flattenSnakeCell(cell: Cell) {
   let c: Cell|null = cell;

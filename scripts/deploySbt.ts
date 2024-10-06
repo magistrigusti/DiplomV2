@@ -1,5 +1,5 @@
 import { toNano } from '@ton/core';
-import { Sbt } from '../wrappers/Sbt';
+import { Sbt } from '../wrappers/sbt/Sbt';
 import { compile, NetworkProvider } from '@ton/blueprint';
 
 export async function run(provider: NetworkProvider) {

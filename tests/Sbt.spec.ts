@@ -493,7 +493,7 @@ describe('Sbt', () => {
         expect(queryId).toEqual(777);
     });
 
-    if ('should not verify ownership non bounced', async () => {
+    it ('should not verify ownership non bounced', async () => {
         let proofReq = await blockchain.treasury('proove req by');
         let dataCell = beginCell().storeUint(888, 16).endCell();
 
